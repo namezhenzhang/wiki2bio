@@ -77,6 +77,7 @@ def get_args_parser():
 
     #============================================#
     args = parser.parse_args()
+    args.root_dir = root_dir
     args.output_dir_base = os.path.join(root_dir,args.output_dir_base)
 
     if not os.path.exists(args.output_dir_base):

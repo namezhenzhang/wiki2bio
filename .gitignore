@@ -7,3 +7,5 @@ wiki2bio_tf/wiki2bio.zip
 计算资源使用说明.zip
 original_data.zip
 wiki2bio_jittor/outputlogs
+wiki2bio_jittor/processed_data
+test.ipynb

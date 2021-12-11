@@ -3,19 +3,23 @@ import logger
 from configs import get_args_parser,  get_args, save_args
 import random
 import numpy  as np
+import jittor
 import time, os, sys, shutil
 # sys.path.append('./')
 from tqdm import tqdm
 # from SeqUnit import *
 from preprocess import *
 from PythonROUGE import PythonROUGE
+from DataLoader import DataLoader
+from DataLoader1 import DataLoader1
 from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
 
 log = logger.get_logger(__name__)
 
 def set_seed(seed):
-    random.seed(seed)
-    np.random.seed(seed)
+    # random.seed(seed)
+    # np.random.seed(seed)
+    jittor.misc.set_global_seed(seed)
     # torch.manual_seed(seed)
     # if args.n_gpu > 0:
     #     torch.cuda.manual_seed_all(seed)
@@ -151,6 +155,15 @@ def copy_file(dst, src=os.path.dirname(__file__)):
             shutil.copy(os.path.join(src,file), dst)
     log.info(f'saved files {saved_files} to {dst}')
 
+def test_main():
+    print(os.path.join(args.root_dir,args.dir))
+    train_dataloader = DataLoader(os.path.join(args.root_dir,args.dir), args.limits, 'dev').set_attrs(batch_size=1, shuffle=True)
+    for i in train_dataloader:
+        pass
+    print(train_dataloader.num_error)
+
+
+
 def main():
     copy_file(save_file_dir)
     #TODO 具体实现
@@ -210,6 +223,6 @@ if __name__=='__main__':
 
     log_file = args.logger_file_name
 
-    main()
+    test_main()
 
 
