@@ -11,7 +11,6 @@ from tqdm import tqdm
 from preprocess import *
 from PythonROUGE import PythonROUGE
 from DataLoader import DataLoader
-from DataLoader1 import DataLoader1
 from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
 
 log = logger.get_logger(__name__)
