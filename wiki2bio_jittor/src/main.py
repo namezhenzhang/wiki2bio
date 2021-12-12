@@ -35,29 +35,34 @@ def do_before_running():
 
 def train(model, train_dataloader,dev_dataloader,test_dataloader):
     k = 0
-    loss, start_time = 0.0, time.time()
+    optimizer = nn.Adam(model.parameters(), args.learning_rate, eps=1e-8, betas=(0.9, 0.999))
+    total_loss, start_time = 0.0, time.time()
     for num_eopch in range(args.epoch):
         input_error_train = 0
         with tqdm(total=len(train_dataloader)) as Tqdm:
             for  x in train_dataloader:
                 Tqdm.update(1)
-                Tqdm.set_postfix(input_error_train=input_error_train)
                 Tqdm.set_description(f"epoch {num_eopch}")
                 try:
                     loss = model(**x)
+                    total_loss += loss.item()
+                    
                 except:
                     input_error_train += 1
                     continue
                 k+=1
-
+                Tqdm.set_postfix(input_error_train=input_error_train,loss=loss.item())
+                optimizer.step(loss)
+                
                 if (k % args.report == 0):
                     cost_time = time.time() - start_time
-                    log.info("%d : loss = %.3f, time = %.3f " % (k // args.report, loss, cost_time))
-                    loss, start_time = 0.0, time.time()
+                    log.info("%d : loss = %.3f, time = %.3f " % (k // args.report, total_loss/args.report, cost_time))
+                    total_loss, start_time = 0.0, time.time()
                     #TODO保存模型
                     if k // args.report >= 1: 
                         ksave_dir = save_model(model, save_dir, k // args.report)
                         log.info(evaluate(model, dev_dataloader, ksave_dir, 'valid'))
+        log.info(f'input_error_train {input_error_train}')
         log.info(f"model.wrong_output: {model.wrong_output}")
 
 def test(model, dataloader):
@@ -132,6 +137,7 @@ def evaluate(model, dataloader, ksave_dir, mode='valid'):
                     pred_mask.append([str(x) for x in mask_sum])
                     k += 1
                     idx += 1
+    log.info(f'input_error_test {input_error_test}')
     write_word(pred_mask, ksave_dir, mode + "_summary_copy.txt")
     write_word(pred_unk, ksave_dir, mode + "_summary_unk.txt")
 
@@ -175,12 +181,14 @@ def copy_file(dst, src=os.path.dirname(os.path.abspath(__file__))):
             shutil.copy(os.path.join(src,file), dst)
     log.info(f'saved files {saved_files} to {dst}')
 
-# def test_main():
-#     print(os.path.join(args.root_dir,args.dir))
-#     train_dataloader = DataLoader(os.path.join(args.root_dir,args.dir), args.limits, 'dev').set_attrs(batch_size=1, shuffle=True)
-#     for i in train_dataloader:
-#         pass
-#     print(train_dataloader.num_error)
+def test_main():
+    print(os.path.join(args.root_dir,args.dir))
+    train_dataloader = DataLoader(os.path.join(args.root_dir,args.dir), args.limits, 'dev').set_attrs(batch_size=32, shuffle=True)
+    with tqdm(total=len(train_dataloader)) as Tqdm:
+        for i in train_dataloader:
+            Tqdm.update(1)
+            pass
+    print(train_dataloader.num_error)
 
 
 
@@ -268,6 +276,9 @@ if __name__=='__main__':
 
     if jittor.compiler.has_cuda and args.use_cuda:
         jittor.flags.use_cuda = 1
+        log.info('use cuda!')
+    else:
+        log.info('use cpu!')
     main()
 
 

@@ -35,8 +35,8 @@ class DataLoader(Dataset):
         log.info(f'Reading {split} dataset comsumes %.3f seconds. Total: {len(self.data_set[0])}.' % (
             time.time() - start_time))
 
-    def __len__(self):
-        return len(self.data_set[0])
+    # def __len__(self):
+    #     return len(self.data_set[0])
 
     def load_data(self, path):
         summary_path, text_path, field_path, pos_path, rpos_path = path
