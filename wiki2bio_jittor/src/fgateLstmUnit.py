@@ -54,7 +54,7 @@ class fgateLstmUnit(nn.Module):
                 state = jittor.zeros_like(h), jittor.zeros_like(c)
             except:
                 print('\nh\n',h,'\nc\n',c)
-                exit(1)
+                raise NotImplementedError()
             state[0][condition] = h_prev[condition]
             state[0][logical_not_condition] = h[logical_not_condition]
             state[1][condition] = c_prev[condition]

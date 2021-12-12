@@ -190,6 +190,10 @@ def main():
         train_dataloader = DataLoader(os.path.join(args.root_dir,args.dir), args.limits, 'train').set_attrs(batch_size=args.batch_size, shuffle=True)
         dev_dataloader = DataLoader(os.path.join(args.root_dir,args.dir), args.limits, 'dev').set_attrs(batch_size=args.batch_size_valid, shuffle=False)
     test_dataloader = DataLoader(os.path.join(args.root_dir,args.dir), args.limits, 'test').set_attrs(batch_size=args.batch_size_valid, shuffle=False)
+    if args.mode == 'train':
+        log.info(f'erro_data: train {train_dataloader.num_error}, dev {dev_dataloader.num_error}, test {test_dataloader.num_error}')
+    else:
+        log.info(f'erro_data: test {test_dataloader.num_error}')
 
     model = SeqUnit(batch_size=args.batch_size, hidden_size=args.hidden_size, emb_size=args.emb_size,
                         field_size=args.field_size, pos_size=args.pos_size, field_vocab=args.field_vocab,
