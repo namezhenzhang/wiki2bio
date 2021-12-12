@@ -27,6 +27,7 @@ def get_args_parser():
     parser.add_argument("--field_size",type=int,default=50,help="Size of embedding.")
     parser.add_argument("--pos_size",type=int,default=5,help="Size of embedding.")
     parser.add_argument("--batch_size",type=int,default=32,help="Batch size of train set.")
+    parser.add_argument("--batch_size_valid",type=int,default=128,help="Batch size of valid set.")
     parser.add_argument("--epoch",type=int,default=50,help="Number of training epoch.")
     parser.add_argument("--source_vocab",type=int,default=20003,help='vocabulary size')
     parser.add_argument("--field_vocab",type=int,default=1480,help='vocabulary size')
@@ -39,7 +40,8 @@ def get_args_parser():
     parser.add_argument("--load",type=str,default='0',help='load directory')
     parser.add_argument("--dir",type=str,default='processed_data',help='data set directory')
     parser.add_argument("--limits",type=int,default=0,help='max data set size')
-
+    parser.add_argument("--use_cuda",type=t_or_f,default=False,help='')
+    
     parser.add_argument("--dual_attention",type=t_or_f,default=True,help='dual attention layer or normal attention')
     parser.add_argument("--fgate_encoder",type=t_or_f,default=True,help='add field gate in encoder lstm')
 

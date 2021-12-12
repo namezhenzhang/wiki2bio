@@ -7,7 +7,7 @@ import jittor
 import time, os, sys, shutil
 # sys.path.append('./')
 from tqdm import tqdm
-# from SeqUnit import *
+from SeqUnit import *
 from preprocess import *
 from PythonROUGE import PythonROUGE
 from DataLoader import DataLoader
@@ -32,49 +32,62 @@ def do_before_running():
     log.info(f"set seed {args.seed}")
     set_seed(args.seed)
     return args
-def train(sess, dataloader, model):
-    trainset = dataloader.train_set
+
+def train(model, train_dataloader,dev_dataloader,test_dataloader):
+    k = 0
     loss, start_time = 0.0, time.time()
-    for _ in range(args.epoch):
-        for k, x in tqdm(enumerate(dataloader.batch_iter(trainset, args.batch_size, True))):
-            loss += model(x, sess)
+    for num_eopch in range(args.epoch):
+        input_error_train = 0
+        with tqdm(total=len(train_dataloader)) as Tqdm:
+            for  x in train_dataloader:
+                Tqdm.update(1)
+                Tqdm.set_postfix(input_error_train=input_error_train)
+                Tqdm.set_description(f"epoch {num_eopch}")
+                try:
+                    loss = model(**x)
+                except:
+                    input_error_train += 1
+                    continue
+                k+=1
 
-            if ((k+1) % args.report == 0):
-                cost_time = time.time() - start_time
-                log.info("%d : loss = %.3f, time = %.3f " % (k // args.report, loss, cost_time))
-                loss, start_time = 0.0, time.time()
-                if k // args.report >= 1: 
-                    ksave_dir = save_model(model, save_dir, k // args.report)
-                    log.info(evaluate(sess, dataloader, model, ksave_dir, 'valid'))
+                if (k % args.report == 0):
+                    cost_time = time.time() - start_time
+                    log.info("%d : loss = %.3f, time = %.3f " % (k // args.report, loss, cost_time))
+                    loss, start_time = 0.0, time.time()
+                    #TODO保存模型
+                    if k // args.report >= 1: 
+                        ksave_dir = save_model(model, save_dir, k // args.report)
+                        log.info(evaluate(model, dev_dataloader, ksave_dir, 'valid'))
+        log.info(f"model.wrong_output: {model.wrong_output}")
 
-def test(sess, dataloader, model):
-    evaluate(sess, dataloader, model, save_dir, 'test')
+def test(model, dataloader):
+    log.info(evaluate(model, dataloader, save_dir, 'test'))
 
 def save_model(model, save_dir, cnt):
-    new_dir = save_dir + 'loads' + '/' 
+    new_dir = save_dir + 'checkpoints' + '/' 
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
     nnew_dir = new_dir + str(cnt) + '/'
     if not os.path.exists(nnew_dir):
         os.mkdir(nnew_dir)
-    #TODO 这里实现可能不同
-    model.save(nnew_dir)
+    model.save(nnew_dir+'model.ckpt')
     return nnew_dir
+
 def write_word(pred_list, save_dir, name):
     ss = open(save_dir + name, "w+")
     for item in pred_list:
         ss.write(" ".join(item) + '\n')
-def evaluate(sess, dataloader, model, ksave_dir, mode='valid'):
+def evaluate(model, dataloader, ksave_dir, mode='valid'):
     if mode == 'valid':
         # texts_path = "original_data/valid.summary"
-        texts_path = "processed_data/valid/valid.box.val"
-        gold_path = gold_path_valid
-        evalset = dataloader.dev_set
+        texts_path = os.path.join(args.root_dir,"processed_data/valid/valid.box.val")
+        gold_path = os.path.join(args.root_dir,'processed_data/valid/valid_split_for_rouge/gold_summary_')
+        # evalset = dataloader.dev_set
     else:
         # texts_path = "original_data/test.summary"
-        texts_path = "processed_data/test/test.box.val"
-        gold_path = gold_path_test
-        evalset = dataloader.test_set
+        texts_path = os.path.join(args.root_dir,"processed_data/test/test.box.val")
+        gold_path = os.path.join(args.root_dir,'processed_data/test/test_split_for_rouge/gold_summary_')
+        # evalset = dataloader.test_set
     
     # for copy words from the infoboxes
     texts = open(texts_path, 'r').read().strip().split('\n')
@@ -86,31 +99,39 @@ def evaluate(sess, dataloader, model, ksave_dir, mode='valid'):
     pred_unk, pred_mask = [], []
     
     k = 0
-    for x in dataloader.batch_iter(evalset, args.batch_size, False):
-        predictions, atts = model.generate(x, sess)
-        atts = np.squeeze(atts)
-        idx = 0
-        for summary in np.array(predictions):
-            with open(pred_path + str(k), 'w') as sw:
-                summary = list(summary)
-                if 2 in summary:
-                    summary = summary[:summary.index(2)] if summary[0] != 2 else [2]
-                real_sum, unk_sum, mask_sum = [], [], []
-                for tk, tid in enumerate(summary):
-                    if tid == 3:
-                        sub = texts[k][np.argmax(atts[tk,: len(texts[k]),idx])]
-                        real_sum.append(sub)
-                        mask_sum.append("**" + str(sub) + "**")
-                    else:
-                        real_sum.append(v.id2word(tid))
-                        mask_sum.append(v.id2word(tid))
-                    unk_sum.append(v.id2word(tid))
-                sw.write(" ".join([str(x) for x in real_sum]) + '\n')
-                pred_list.append([str(x) for x in real_sum])
-                pred_unk.append([str(x) for x in unk_sum])
-                pred_mask.append([str(x) for x in mask_sum])
-                k += 1
-                idx += 1
+    input_error_test = 0
+    with tqdm(total=len(dataloader)) as Tqdm:
+        for x in dataloader:
+            Tqdm.update(1)
+            Tqdm.set_postfix(input_error_test=input_error_test)
+            try:
+                predictions, atts = model.generate(**x)
+            except:
+                continue
+            # print(atts)
+            atts = np.squeeze(np.array(atts),axis=-1)
+            idx = 0
+            for summary in np.array(predictions):
+                with open(pred_path + str(k), 'w') as sw:
+                    summary = list(summary)
+                    if 2 in summary:
+                        summary = summary[:summary.index(2)] if summary[0] != 2 else [2]
+                    real_sum, unk_sum, mask_sum = [], [], []
+                    for tk, tid in enumerate(summary):
+                        if tid == 3:
+                            sub = texts[k][np.argmax(atts[tk,: len(texts[k]),idx])]
+                            real_sum.append(sub)
+                            mask_sum.append("**" + str(sub) + "**")
+                        else:
+                            real_sum.append(v.id2word(tid))
+                            mask_sum.append(v.id2word(tid))
+                        unk_sum.append(v.id2word(tid))
+                    sw.write(" ".join([str(x) for x in real_sum]) + '\n')
+                    pred_list.append([str(x) for x in real_sum])
+                    pred_unk.append([str(x) for x in unk_sum])
+                    pred_mask.append([str(x) for x in mask_sum])
+                    k += 1
+                    idx += 1
     write_word(pred_mask, ksave_dir, mode + "_summary_copy.txt")
     write_word(pred_unk, ksave_dir, mode + "_summary_unk.txt")
 
@@ -144,7 +165,7 @@ def evaluate(sess, dataloader, model, ksave_dir, mode='valid'):
 
     return result
 
-def copy_file(dst, src=os.path.dirname(__file__)):
+def copy_file(dst, src=os.path.dirname(os.path.abspath(__file__))):
     files = os.listdir(src)
     saved_files = []
     for file in files:
@@ -154,17 +175,35 @@ def copy_file(dst, src=os.path.dirname(__file__)):
             shutil.copy(os.path.join(src,file), dst)
     log.info(f'saved files {saved_files} to {dst}')
 
-def test_main():
-    print(os.path.join(args.root_dir,args.dir))
-    train_dataloader = DataLoader(os.path.join(args.root_dir,args.dir), args.limits, 'dev').set_attrs(batch_size=1, shuffle=True)
-    for i in train_dataloader:
-        pass
-    print(train_dataloader.num_error)
+# def test_main():
+#     print(os.path.join(args.root_dir,args.dir))
+#     train_dataloader = DataLoader(os.path.join(args.root_dir,args.dir), args.limits, 'dev').set_attrs(batch_size=1, shuffle=True)
+#     for i in train_dataloader:
+#         pass
+#     print(train_dataloader.num_error)
 
 
 
 def main():
     copy_file(save_file_dir)
+    if args.mode == 'train':
+        train_dataloader = DataLoader(os.path.join(args.root_dir,args.dir), args.limits, 'train').set_attrs(batch_size=args.batch_size, shuffle=True)
+        dev_dataloader = DataLoader(os.path.join(args.root_dir,args.dir), args.limits, 'dev').set_attrs(batch_size=args.batch_size_valid, shuffle=False)
+    test_dataloader = DataLoader(os.path.join(args.root_dir,args.dir), args.limits, 'test').set_attrs(batch_size=args.batch_size_valid, shuffle=False)
+
+    model = SeqUnit(batch_size=args.batch_size, hidden_size=args.hidden_size, emb_size=args.emb_size,
+                        field_size=args.field_size, pos_size=args.pos_size, field_vocab=args.field_vocab,
+                        source_vocab=args.source_vocab, position_vocab=args.position_vocab,
+                        target_vocab=args.target_vocab, scope_name="seq2seq", name="seq2seq",
+                        field_concat=args.field, position_concat=args.position,
+                        fgate_enc=args.fgate_encoder, dual_att=args.dual_attention, decoder_add_pos=args.decoder_pos,
+                        encoder_add_pos=args.encoder_pos, learning_rate=args.learning_rate)
+    if args.load != '0':
+        model.load(save_dir)
+    if args.mode == 'train':
+        train(model,train_dataloader,dev_dataloader,test_dataloader )
+    else:
+        test(model,test_dataloader)
     #TODO 具体实现
     pass
     # config = tf.ConfigProto(allow_soft_placement=True)
@@ -193,6 +232,7 @@ def main():
 
 if __name__=='__main__':
     args = do_before_running()
+    os.chdir(args.root_dir)
     last_best = 0.0
     gold_path_test = 'processed_data/test/test_split_for_rouge/gold_summary_'
     gold_path_valid = 'processed_data/valid/valid_split_for_rouge/gold_summary_'
@@ -222,6 +262,8 @@ if __name__=='__main__':
 
     log_file = args.logger_file_name
 
-    test_main()
+    if jittor.compiler.has_cuda and args.use_cuda:
+        jittor.flags.use_cuda = 1
+    main()
 
 

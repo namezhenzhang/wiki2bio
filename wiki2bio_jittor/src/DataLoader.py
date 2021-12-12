@@ -1,6 +1,7 @@
 import time
 import logger
 import numpy as np
+import jittor
 from jittor.dataset import Dataset
 
 log = logger.get_logger(__name__)
@@ -74,7 +75,6 @@ class DataLoader(Dataset):
     #     return batch
 
     def collate_batch(self, batch):
-        # {key: batch[0][key] + batch[0][key] for key in batch[0]}
         batch_size = len(batch)
         batch = [[batch[j][i] for j in range(batch_size)] for i in range(5)]
         # print((batch))
@@ -83,8 +83,10 @@ class DataLoader(Dataset):
         
         max_summary_len = max([len(sample) for sample in summaries])
         max_text_len = max([len(sample) for sample in texts])
-        batch_data = {'enc_in':[], 'enc_fd':[], 'enc_pos':[], 'enc_rpos':[], 'enc_len':[],
-                          'dec_in':[], 'dec_len':[], 'dec_out':[]}
+        # batch_data = {'enc_in':[], 'enc_fd':[], 'enc_pos':[], 'enc_rpos':[], 'enc_len':[],
+        #                   'dec_in':[], 'dec_len':[], 'dec_out':[]}
+        batch_data = {'encoder_input':[], 'encoder_field':[], 'encoder_pos':[], 'encoder_rpos':[], 'encoder_len':[],
+                          'decoder_input':[], 'decoder_len':[], 'decoder_output':[]}
         for summary, text, field, pos, rpos in zip(*batch):
             summary_len = len(summary)
             text_len = len(text)
@@ -109,12 +111,23 @@ class DataLoader(Dataset):
                 rpos = rpos[:self.man_text_len]
                 text_len = min(text_len, self.man_text_len)
             
-            batch_data['enc_in'].append(text)
-            batch_data['enc_len'].append(text_len)
-            batch_data['enc_fd'].append(field)
-            batch_data['enc_pos'].append(pos)
-            batch_data['enc_rpos'].append(rpos)
-            batch_data['dec_in'].append(summary)
-            batch_data['dec_len'].append(summary_len)
-            batch_data['dec_out'].append(gold)
+            # batch_data['enc_in'].append(text)
+            # batch_data['enc_len'].append(text_len)
+            # batch_data['enc_fd'].append(field)
+            # batch_data['enc_pos'].append(pos)
+            # batch_data['enc_rpos'].append(rpos)
+            # batch_data['dec_in'].append(summary)
+            # batch_data['dec_len'].append(summary_len)
+            # batch_data['dec_out'].append(gold)
+
+            batch_data['encoder_input'].append(text)
+            batch_data['encoder_len'].append(text_len)
+            batch_data['encoder_field'].append(field)
+            batch_data['encoder_pos'].append(pos)
+            batch_data['encoder_rpos'].append(rpos)
+            batch_data['decoder_input'].append(summary)
+            batch_data['decoder_len'].append(summary_len)
+            batch_data['decoder_output'].append(gold)
+
+        batch_data = { key:jittor.array(batch_data[key]) for key in batch_data}
         return batch_data
