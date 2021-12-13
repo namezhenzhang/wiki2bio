@@ -37,6 +37,7 @@ def train(model, train_dataloader,dev_dataloader,test_dataloader):
     k = 0
     optimizer = nn.Adam(model.parameters(), args.learning_rate, eps=1e-8, betas=(0.9, 0.999))
     total_loss, start_time = 0.0, time.time()
+    loss = 0.0
     for num_eopch in range(args.epoch):
         input_error_train = 0
         with tqdm(total=len(train_dataloader)) as Tqdm:
@@ -44,15 +45,19 @@ def train(model, train_dataloader,dev_dataloader,test_dataloader):
                 Tqdm.update(1)
                 Tqdm.set_description(f"epoch {num_eopch}")
                 try:
-                    loss = model(**x)
-                    total_loss += loss.item()
+                    loss = model(**x) + loss
+                    # total_loss += now_loss.item()
                     
                 except:
                     input_error_train += 1
                     continue
                 k+=1
-                Tqdm.set_postfix(input_error_train=input_error_train,loss=loss.item())
-                optimizer.step(loss)
+                if k % args.accumulation==0:
+                    loss = loss/args.accumulation
+                    Tqdm.set_postfix(input_error_train=input_error_train,loss=loss.item())
+                    optimizer.step(loss)
+                    loss = 0.0
+                
                 
                 if (k % args.report == 0):
                     cost_time = time.time() - start_time

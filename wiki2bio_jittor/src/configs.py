@@ -28,6 +28,7 @@ def get_args_parser():
     parser.add_argument("--pos_size",type=int,default=5,help="Size of embedding.")
     parser.add_argument("--batch_size",type=int,default=32,help="Batch size of train set.")
     parser.add_argument("--batch_size_valid",type=int,default=128,help="Batch size of valid set.")
+    parser.add_argument("--accumulation",type=int,default=1,help=".")
     parser.add_argument("--epoch",type=int,default=50,help="Number of training epoch.")
     parser.add_argument("--source_vocab",type=int,default=20003,help='vocabulary size')
     parser.add_argument("--field_vocab",type=int,default=1480,help='vocabulary size')
