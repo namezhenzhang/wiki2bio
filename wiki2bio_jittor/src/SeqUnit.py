@@ -23,6 +23,9 @@ class SeqUnit(nn.Module):
         fgate_enc, dual_att: bool values, whether use field-gating / dual attention or not
         encoder_add_pos, decoder_add_pos: bool values, whether add position embedding to field-gating encoder / decoder with dual attention or not
         '''
+
+        super(SeqUnit, self).__init__()
+
         self.batch_size = batch_size
         self.hidden_size = hidden_size
         self.emb_size = emb_size
@@ -132,9 +135,6 @@ class SeqUnit(nn.Module):
         
         de_outputs, de_state = self.step('training',encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field,encoder_pos,encoder_rpos)
 
-        if de_outputs.shape[1] != decoder_output.shape[1]:
-            self.wrong_output+=1
-            return jittor.zeros((1,))
         losses = self.cs_loss(de_outputs.reshape((-1,de_outputs.shape[-1])), decoder_output.reshape((-1,)))
         # print(decoder_output.dtype)
         mask = jittor.nn.sign(jittor.float32(decoder_output))

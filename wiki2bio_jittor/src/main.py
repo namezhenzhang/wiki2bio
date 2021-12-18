@@ -41,6 +41,7 @@ def train(model, train_dataloader,dev_dataloader,test_dataloader):
     for num_eopch in range(args.epoch):
         with tqdm(total=len(train_dataloader)) as Tqdm:
             for  x in train_dataloader:
+                model.train()
                 Tqdm.update(1)
                 Tqdm.set_description(f"epoch {num_eopch}")
 
@@ -50,8 +51,8 @@ def train(model, train_dataloader,dev_dataloader,test_dataloader):
                     
                 global_step+=1
                 if global_step % args.accumulation==0:
-                    # loss = loss/args.accumulation
-                    Tqdm.set_postfix(input_error_train = (loss/args.accumulation).item() )
+                    loss = loss/args.accumulation
+                    Tqdm.set_postfix(loss = loss.item() )
                     optimizer.step(loss)
                     loss = 0.0
                 
@@ -82,6 +83,7 @@ def write_word(pred_list, save_dir, name):
     ss = open(save_dir + name, "w+")
     for item in pred_list:
         ss.write(" ".join(item) + '\n')
+@jittor.no_grad()
 def evaluate(model, dataloader, ksave_dir, mode='valid'):
     if mode == 'valid':
         # texts_path = "original_data/valid.summary"
@@ -106,6 +108,7 @@ def evaluate(model, dataloader, ksave_dir, mode='valid'):
     k = 0
     with tqdm(total=len(dataloader)) as Tqdm:
         for x in dataloader:
+            model.eval()
             Tqdm.update(1)
             predictions, atts = model.generate(**x)
 
@@ -132,7 +135,7 @@ def evaluate(model, dataloader, ksave_dir, mode='valid'):
                     pred_mask.append([str(x) for x in mask_sum])
                     k += 1
                     idx += 1
-                    
+
     write_word(pred_mask, ksave_dir, mode + "_summary_copy.txt")
     write_word(pred_unk, ksave_dir, mode + "_summary_unk.txt")
 
@@ -214,7 +217,7 @@ def main():
 
 if __name__=='__main__':
     args = do_before_running()
-    args.learning_rate /= args.accumulation
+
     os.chdir(args.root_dir)
     last_best = 0.0
     gold_path_test = 'processed_data/test/test_split_for_rouge/gold_summary_'
