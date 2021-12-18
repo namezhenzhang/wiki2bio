@@ -10,8 +10,7 @@ from fgateLstmUnit import fgateLstmUnit
 from OutputUnit import OutputUnit
 
 log = logger.get_logger(__name__)
-def crossentropyloss(output,target):
-    pass
+
 
 class SeqUnit(nn.Module):
     def __init__(self, batch_size, hidden_size, emb_size, field_size, pos_size, source_vocab, field_vocab,
@@ -52,7 +51,7 @@ class SeqUnit(nn.Module):
 
         self.wrong_output = 0
         self.units = {}
-        self.params = {}
+
 
         self.cs_loss = nn.CrossEntropyLoss()
 
@@ -68,15 +67,13 @@ class SeqUnit(nn.Module):
         if self.dual_att:
             log.info('dual attention mechanism used')
             self.att_layer = dualAttentionWrapper(self.hidden_size, self.hidden_size, self.field_attention_size, "attention")
-            # self.units.update({'attention': self.att_layer})
         else:
             log.info("normal attention used")
             self.att_layer = AttentionWrapper(self.hidden_size, self.hidden_size, "attention")
-            # self.units.update({'attention': self.att_layer})
+
 
         # TODO 将子模型加入到module列表中，add_module
-        # self.units.update({'encoder_lstm': self.enc_lstm,'decoder_lstm': self.dec_lstm,
-        #                    'decoder_output': self.dec_out})
+
 
 
         self.embedding = nn.Embedding(self.source_vocab,self.emb_size)
@@ -87,9 +84,10 @@ class SeqUnit(nn.Module):
             self.rembedding = nn.Embedding(self.position_vocab,self.pos_size)
 
     def step(self,type_,encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field=None,encoder_pos=None,encoder_rpos=None):
-        # print('step\n',type_,encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field,encoder_pos,encoder_rpos,'\nend')
+
         assert ((self.field_concat or self.fgate_enc or self.encoder_add_pos or self.decoder_add_pos) == (encoder_field is not None))
         assert (self.position_concat or self.encoder_add_pos or self.decoder_add_pos) == (encoder_pos is not None) == (encoder_rpos is not None)
+        
         # ======================================== embeddings ======================================== #
         encoder_embed = self.embedding(encoder_input)
         decoder_embed = self.embedding(decoder_input)
@@ -106,13 +104,7 @@ class SeqUnit(nn.Module):
                 field_pos_embed = jittor.concat([field_embed, pos_embed, rpos_embed], 2)
             elif self.encoder_add_pos or self.decoder_add_pos:
                 field_pos_embed = jittor.concat([field_embed, pos_embed, rpos_embed], 2)
-        
-        # if self.field_concat or self.fgate_enc:
-        #     self.params.update({'fembedding': self.fembedding})
-        # if self.position_concat or self.encoder_add_pos or self.decoder_add_pos:
-        #     self.params.update({'pembedding': self.pembedding})
-        #     self.params.update({'rembedding': self.rembedding})
-        # self.params.update({'embedding': self.embedding})
+    
 
         # ======================================== encoder ======================================== #
         if self.fgate_enc:
@@ -137,8 +129,9 @@ class SeqUnit(nn.Module):
             raise NotImplementedError()
             # beam_seqs, beam_probs, cand_seqs, cand_probs = self.decoder_beam(en_state, beam_size)
     def execute(self,encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field=None,encoder_pos=None,encoder_rpos=None):
+        
         de_outputs, de_state = self.step('training',encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field,encoder_pos,encoder_rpos)
-        # print(de_outputs.shape,decoder_output.shape)
+
         if de_outputs.shape[1] != decoder_output.shape[1]:
             self.wrong_output+=1
             return jittor.zeros((1,))
@@ -151,6 +144,7 @@ class SeqUnit(nn.Module):
         return self.mean_loss
 
     def encoder(self, inputs, inputs_len):
+
         batch_size = inputs.shape[0]
         max_time = inputs.shape[1]
         hidden_size = self.hidden_size
@@ -178,7 +172,9 @@ class SeqUnit(nn.Module):
         state = s_t
 
         return outputs, state
+
     def fgate_encoder(self, inputs, fields, inputs_len):
+
         batch_size = inputs.shape[0]
         max_time = inputs.shape[1]
         hidden_size = self.hidden_size
@@ -193,7 +189,7 @@ class SeqUnit(nn.Module):
         emit_ta = []
 
         t, x_t, d_t, s_t, finished = time, inputs[time],fields[time], h0, f0
-        # print('inputsshape: ',inputs.shape,x_t.shape)
+
         while jittor.logical_not(jittor.all(finished)):
             o_t, s_t = self.enc_lstm(x_t, d_t, s_t, finished)
             emit_ta.append(o_t)
@@ -205,12 +201,14 @@ class SeqUnit(nn.Module):
                 x_t = inputs[t+1]
                 d_t = fields[t+1]
             t+=1
-        # assert len(emit_ta)==max_time
+
         outputs = jittor.stack(emit_ta).transpose([1,0,2])
         state = s_t
 
         return outputs, state
+
     def decoder_t(self, initial_state, inputs, inputs_len, en_outputs):
+
         batch_size = inputs.shape[0]
         max_time = inputs.shape[1]
 
@@ -234,12 +232,13 @@ class SeqUnit(nn.Module):
             else:
                 x_t = inputs[t]
             t+=1
-        # assert len(emit_ta)==max_time
+
         outputs = jittor.stack(emit_ta).transpose([1,0,2])
         state = s_t
         return outputs, state
+
     def decoder_g(self, initial_state, en_outputs):
-        # print(en_outputs.shape)
+
         batch_size = initial_state[0].shape[0]
         # time = jittor.array(0,dtype=jittor.int32)
         time = 0
@@ -257,7 +256,7 @@ class SeqUnit(nn.Module):
             o_t = self.dec_out(o_t, finished)
             emit_ta.append(o_t)
             att_ta.append(w_t)
-            # print(o_t.shape)
+
             next_token = jittor.argmax(o_t, 1)[0]
             x_t = self.embedding(next_token)
             finished = jittor.logical_or(finished, jittor.equal(next_token, self.stop_token))
@@ -273,9 +272,10 @@ class SeqUnit(nn.Module):
     def decoder_beam(self, initial_state, beam_size):
         raise NotImplementedError()
 
-    def generate(self, encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field=None,encoder_pos=None,encoder_rpos=None,**argv):
+    def generate(self, encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field=None,encoder_pos=None,encoder_rpos=None):
         g_tokens, atts = self.step('testing',encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field,encoder_pos,encoder_rpos)
         return g_tokens, atts
-    def generate_beam(self, encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field=None,encoder_pos=None,encoder_rpos=None,**argv):
+
+    def generate_beam(self, encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field=None,encoder_pos=None,encoder_rpos=None):
         beam_seqs_all, beam_probs_all, cand_seqs_all, cand_probs_all = self.step('beam',encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field,encoder_pos,encoder_rpos)
         return beam_seqs_all, beam_probs_all, cand_seqs_all, cand_probs_all

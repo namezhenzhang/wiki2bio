@@ -34,41 +34,36 @@ def do_before_running():
     return args
 
 def train(model, train_dataloader,dev_dataloader,test_dataloader):
-    k = 0
+    global_step = 0
     optimizer = nn.Adam(model.parameters(), args.learning_rate, eps=1e-8, betas=(0.9, 0.999))
     total_loss, start_time = 0.0, time.time()
     loss = 0.0
     for num_eopch in range(args.epoch):
-        input_error_train = 0
         with tqdm(total=len(train_dataloader)) as Tqdm:
             for  x in train_dataloader:
                 Tqdm.update(1)
                 Tqdm.set_description(f"epoch {num_eopch}")
-                try:
-                    loss = model(**x) + loss
-                    # total_loss += now_loss.item()
+
+                now_loss = model(**x)
+                loss = now_loss + loss
+                total_loss += now_loss.item()
                     
-                except:
-                    input_error_train += 1
-                    continue
-                k+=1
-                if k % args.accumulation==0:
+                global_step+=1
+                if global_step % args.accumulation==0:
                     # loss = loss/args.accumulation
-                    Tqdm.set_postfix(input_error_train=input_error_train)
+                    Tqdm.set_postfix(input_error_train = (loss/args.accumulation).item() )
                     optimizer.step(loss)
                     loss = 0.0
                 
                 
-                if (k % args.report == 0):
+                if (global_step % args.report == 0):
                     cost_time = time.time() - start_time
-                    log.info("%d : loss = %.3f, time = %.3f " % (k // args.report, total_loss/args.report, cost_time))
+                    log.info("%d : loss = %.3f, time = %.3f " % (global_step // args.report, total_loss/args.report, cost_time))
                     total_loss, start_time = 0.0, time.time()
                     #TODO保存模型
-                    if k // args.report >= 1: 
-                        ksave_dir = save_model(model, save_dir, k // args.report)
+                    if global_step // args.report >= 1: 
+                        ksave_dir = save_model(model, save_dir, global_step // args.report)
                         log.info(evaluate(model, dev_dataloader, ksave_dir, 'valid'))
-        log.info(f'input_error_train {input_error_train}')
-        log.info(f"model.wrong_output: {model.wrong_output}")
 
 def test(model, dataloader):
     log.info(evaluate(model, dataloader, save_dir, 'test'))
@@ -109,16 +104,11 @@ def evaluate(model, dataloader, ksave_dir, mode='valid'):
     pred_unk, pred_mask = [], []
     
     k = 0
-    input_error_test = 0
     with tqdm(total=len(dataloader)) as Tqdm:
         for x in dataloader:
             Tqdm.update(1)
-            Tqdm.set_postfix(input_error_test=input_error_test)
-            try:
-                predictions, atts = model.generate(**x)
-            except:
-                continue
-            # print(atts)
+            predictions, atts = model.generate(**x)
+
             atts = np.squeeze(np.array(atts),axis=-1)
             idx = 0
             for summary in np.array(predictions):
@@ -142,7 +132,7 @@ def evaluate(model, dataloader, ksave_dir, mode='valid'):
                     pred_mask.append([str(x) for x in mask_sum])
                     k += 1
                     idx += 1
-    log.info(f'input_error_test {input_error_test}')
+                    
     write_word(pred_mask, ksave_dir, mode + "_summary_copy.txt")
     write_word(pred_unk, ksave_dir, mode + "_summary_unk.txt")
 
@@ -186,14 +176,14 @@ def copy_file(dst, src=os.path.dirname(os.path.abspath(__file__))):
             shutil.copy(os.path.join(src,file), dst)
     log.info(f'saved files {saved_files} to {dst}')
 
-def test_main():
-    print(os.path.join(args.root_dir,args.dir))
-    train_dataloader = DataLoader(os.path.join(args.root_dir,args.dir), args.limits, 'dev').set_attrs(batch_size=32, shuffle=True)
-    with tqdm(total=len(train_dataloader)) as Tqdm:
-        for i in train_dataloader:
-            Tqdm.update(1)
-            pass
-    print(train_dataloader.num_error)
+# def test_main():
+#     print(os.path.join(args.root_dir,args.dir))
+#     train_dataloader = DataLoader(os.path.join(args.root_dir,args.dir), args.limits, 'dev').set_attrs(batch_size=32, shuffle=True)
+#     with tqdm(total=len(train_dataloader)) as Tqdm:
+#         for i in train_dataloader:
+#             Tqdm.update(1)
+#             pass
+#     print(train_dataloader.num_error)
 
 
 
@@ -221,31 +211,6 @@ def main():
         train(model,train_dataloader,dev_dataloader,test_dataloader )
     else:
         test(model,test_dataloader)
-    #TODO 具体实现
-    pass
-    # config = tf.ConfigProto(allow_soft_placement=True)
-    # config.gpu_options.allow_growth = True
-    # with tf.Session(config=config) as sess:
-        
-        # dataloader = DataLoader(args.dir, args.limits)
-        # model = SeqUnit(batch_size=args.batch_size, hidden_size=args.hidden_size, emb_size=args.emb_size,
-        #                 field_size=args.field_size, pos_size=args.pos_size, field_vocab=args.field_vocab,
-        #                 source_vocab=args.source_vocab, position_vocab=args.position_vocab,
-        #                 target_vocab=args.target_vocab, scope_name="seq2seq", name="seq2seq",
-        #                 field_concat=args.field, position_concat=args.position,
-        #                 fgate_enc=args.fgate_encoder, dual_att=args.dual_attention, decoder_add_pos=args.decoder_pos,
-        #                 encoder_add_pos=args.encoder_pos, learning_rate=args.learning_rate)
-        # # sess.run(tf.global_variables_initializer())
-        # # copy_file(save_file_dir)
-        # if args.load != '0':
-        #     model.load(save_dir)
-        # if args.mode == 'train':
-        #     train(sess, dataloader, model)
-        # else:
-        #     test(sess, dataloader, model)
-
-
-
 
 if __name__=='__main__':
     args = do_before_running()
@@ -285,6 +250,9 @@ if __name__=='__main__':
         log.info('use cuda!')
     else:
         log.info('use cpu!')
+
     main()
+
+    log.info('all finished')
 
 
