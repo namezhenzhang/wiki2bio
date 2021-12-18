@@ -2,8 +2,8 @@
 # export trace_py_var=3
  
 python wiki2bio_jittor/src/main.py \
---mode test \
---batch_size 64 \
+--mode train \
+--batch_size 80 \
 --batch_size_valid 256 \
 --accumulation 2 \
 --use_cuda True \

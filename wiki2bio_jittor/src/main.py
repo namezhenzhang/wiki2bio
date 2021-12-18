@@ -12,6 +12,7 @@ from preprocess import *
 from PythonROUGE import PythonROUGE
 from DataLoader import DataLoader
 from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
+from tensorboardX import SummaryWriter
 
 log = logger.get_logger(__name__)
 
@@ -33,8 +34,11 @@ def do_before_running():
     set_seed(args.seed)
     return args
 
-def train(model, train_dataloader,dev_dataloader,test_dataloader):
-    global_step = 0
+
+global_step = 0
+
+def train(model, train_dataloader,dev_dataloader,test_dataloader,writer):
+    global global_step
     optimizer = nn.Adam(model.parameters(), args.learning_rate, eps=1e-8, betas=(0.9, 0.999))
     total_loss, start_time = 0.0, time.time()
     loss = 0.0
@@ -53,6 +57,7 @@ def train(model, train_dataloader,dev_dataloader,test_dataloader):
                 if global_step % args.accumulation==0:
                     loss = loss/args.accumulation
                     Tqdm.set_postfix(loss = loss.item() )
+                    writer.add_scalar("train_loss", loss.item(), global_step=global_step)
                     optimizer.step(loss)
                     loss = 0.0
                 
@@ -66,8 +71,8 @@ def train(model, train_dataloader,dev_dataloader,test_dataloader):
                         ksave_dir = save_model(model, save_dir, global_step // args.report)
                         log.info(evaluate(model, dev_dataloader, ksave_dir, 'valid'))
 
-def test(model, dataloader):
-    log.info(evaluate(model, dataloader, save_dir, 'test'))
+def test(model, dataloader,writer):
+    log.info(evaluate(model, dataloader, save_dir, writer,'test'))
 
 def save_model(model, save_dir, cnt):
     new_dir = save_dir + 'checkpoints' + '/' 
@@ -84,7 +89,7 @@ def write_word(pred_list, save_dir, name):
     for item in pred_list:
         ss.write(" ".join(item) + '\n')
 @jittor.no_grad()
-def evaluate(model, dataloader, ksave_dir, mode='valid'):
+def evaluate(model, dataloader, ksave_dir, writer,mode='valid'):
     if mode == 'valid':
         # texts_path = "original_data/valid.summary"
         texts_path = os.path.join(args.root_dir,"processed_data/valid/valid.box.val")
@@ -151,6 +156,19 @@ def evaluate(model, dataloader, ksave_dir, mode='valid'):
     bleu = corpus_bleu(gold_list, pred_list)
     copy_result = "with copy F_measure: %s Recall: %s Precision: %s BLEU: %s\n" % \
     (str(F_measure), str(recall), str(precision), str(bleu))
+
+    try:
+        writer.add_scalar('F_measure copy', F_measure, global_step=global_step)
+        writer.add_scalar('Recall copy', recall, global_step=global_step)
+        writer.add_scalar('Precision copy', precision, global_step=global_step)
+    except:
+        pass
+    try:
+        writer.add_scalar('BLEU copy', bleu, global_step=global_step)
+    except:
+        pass
+
+
     # print copy_result
 
     for tk in range(k):
@@ -161,6 +179,17 @@ def evaluate(model, dataloader, ksave_dir, mode='valid'):
     bleu = corpus_bleu(gold_list, pred_unk)
     nocopy_result = "without copy F_measure: %s Recall: %s Precision: %s BLEU: %s\n" % \
     (str(F_measure), str(recall), str(precision), str(bleu))
+    try:
+        writer.add_scalar('F_measure nocopy', F_measure, global_step=global_step)
+        writer.add_scalar('Recall nocopy', recall, global_step=global_step)
+        writer.add_scalar('Precision nocopy', precision, global_step=global_step)
+    except:
+        pass
+    try:
+        writer.add_scalar('BLEU nocopy', bleu, global_step=global_step)
+    except:
+        pass
+
     # print nocopy_result
     result = copy_result + nocopy_result 
     # print result
@@ -208,12 +237,13 @@ def main():
                         field_concat=args.field, position_concat=args.position,
                         fgate_enc=args.fgate_encoder, dual_att=args.dual_attention, decoder_add_pos=args.decoder_pos,
                         encoder_add_pos=args.encoder_pos, learning_rate=args.learning_rate)
+    writer = SummaryWriter(args.output_dir + '/tensorboard/')
     if args.load != '0':
         model.load(save_dir)
     if args.mode == 'train':
-        train(model,train_dataloader,dev_dataloader,test_dataloader )
+        train(model,train_dataloader,dev_dataloader,test_dataloader,writer)
     else:
-        test(model,test_dataloader)
+        test(model,test_dataloader,writer)
 
 if __name__=='__main__':
     args = do_before_running()
