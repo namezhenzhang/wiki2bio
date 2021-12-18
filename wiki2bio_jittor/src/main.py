@@ -53,8 +53,8 @@ def train(model, train_dataloader,dev_dataloader,test_dataloader):
                     continue
                 k+=1
                 if k % args.accumulation==0:
-                    loss = loss/args.accumulation
-                    Tqdm.set_postfix(input_error_train=input_error_train,loss=loss.item())
+                    # loss = loss/args.accumulation
+                    Tqdm.set_postfix(input_error_train=input_error_train)
                     optimizer.step(loss)
                     loss = 0.0
                 
@@ -249,6 +249,7 @@ def main():
 
 if __name__=='__main__':
     args = do_before_running()
+    args.learning_rate /= args.accumulation
     os.chdir(args.root_dir)
     last_best = 0.0
     gold_path_test = 'processed_data/test/test_split_for_rouge/gold_summary_'
