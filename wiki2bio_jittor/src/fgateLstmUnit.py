@@ -40,18 +40,18 @@ class fgateLstmUnit(nn.Module):
 
         out, state = h, (h, c)
         if finished is not None:
-            out = jittor.ternary(finished, jittor.zeros_like(h), h)
-            state = (jittor.ternary(finished, h_prev, h), jittor.ternary(finished, c_prev, c))
-            # condition = jittor.array(finished,dtype=bool)
-            # logical_not_condition = jittor.logical_not(condition)
-            # out = jittor.zeros_like(out)
-            # out[logical_not_condition] = h[logical_not_condition]
+            # out = jittor.ternary(finished, jittor.zeros_like(h), h)
+            # state = (jittor.ternary(finished, h_prev, h), jittor.ternary(finished, c_prev, c))
+            condition = jittor.array(finished,dtype=bool)
+            logical_not_condition = jittor.logical_not(condition)
+            out = jittor.zeros_like(out)
+            out[logical_not_condition] = h[logical_not_condition]
 
-            # state = jittor.zeros_like(h), jittor.zeros_like(c)
+            state = jittor.zeros_like(h), jittor.zeros_like(c)
 
-            # state[0][condition] = h_prev[condition]
-            # state[0][logical_not_condition] = h[logical_not_condition]
-            # state[1][condition] = c_prev[condition]
-            # state[1][logical_not_condition] = c[logical_not_condition]
+            state[0][condition] = h_prev[condition]
+            state[0][logical_not_condition] = h[logical_not_condition]
+            state[1][condition] = c_prev[condition]
+            state[1][logical_not_condition] = c[logical_not_condition]
 
         return out, state

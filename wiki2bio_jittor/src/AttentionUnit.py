@@ -33,6 +33,7 @@ class AttentionWrapper(nn.Module):
         out = jittor.tanh(self.linear_o(jittor.concat([context, x], -1)))
         
         if finished is not None:
-            out = jittor.ternary(finished, jittor.zeros_like(out), out)
-
+            # out = jittor.ternary(finished, jittor.zeros_like(out), out)
+            condition = jittor.array(finished,dtype=bool)
+            out[condition] = jittor.zeros_like(out)[condition]
         return out, weights
