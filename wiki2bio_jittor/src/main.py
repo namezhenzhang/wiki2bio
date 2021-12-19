@@ -69,10 +69,10 @@ def train(model, train_dataloader,dev_dataloader,test_dataloader,writer):
                     #TODO保存模型
                     if global_step // args.report >= 1: 
                         ksave_dir = save_model(model, save_dir, global_step // args.report)
-                        log.info(evaluate(model, dev_dataloader, ksave_dir, 'valid'))
+                        evaluate(model, dev_dataloader, ksave_dir, 'valid')
 
 def test(model, dataloader,writer):
-    log.info(evaluate(model, dataloader, save_dir, writer,'test'))
+    evaluate(model, dataloader, save_dir, writer,'test')
 
 def save_model(model, save_dir, cnt):
     new_dir = save_dir + 'checkpoints' + '/' 
@@ -154,9 +154,9 @@ def evaluate(model, dataloader, ksave_dir, writer,mode='valid'):
 
     recall, precision, F_measure = PythonROUGE(pred_set, gold_set, ngram_order=4)
     bleu = corpus_bleu(gold_list, pred_list)
-    copy_result = "with copy F_measure: %s Recall: %s Precision: %s BLEU: %s\n" % \
+    copy_result = "with copy F_measure: %s Recall: %s Precision: %s BLEU: %s ." % \
     (str(F_measure), str(recall), str(precision), str(bleu))
-
+    log.info(copy_result)
     try:
         writer.add_scalar('F_measure copy', F_measure, global_step=global_step)
         writer.add_scalar('Recall copy', recall, global_step=global_step)
@@ -177,8 +177,9 @@ def evaluate(model, dataloader, ksave_dir, writer,mode='valid'):
 
     recall, precision, F_measure = PythonROUGE(pred_set, gold_set, ngram_order=4)
     bleu = corpus_bleu(gold_list, pred_unk)
-    nocopy_result = "without copy F_measure: %s Recall: %s Precision: %s BLEU: %s\n" % \
+    nocopy_result = "without copy F_measure: %s Recall: %s Precision: %s BLEU: %s ." % \
     (str(F_measure), str(recall), str(precision), str(bleu))
+    log.info(nocopy_result)
     try:
         writer.add_scalar('F_measure nocopy', F_measure, global_step=global_step)
         writer.add_scalar('Recall nocopy', recall, global_step=global_step)
@@ -193,8 +194,8 @@ def evaluate(model, dataloader, ksave_dir, writer,mode='valid'):
     # print nocopy_result
     result = copy_result + nocopy_result 
     # print result
-    if mode == 'valid':
-        log.info(result)
+    # if mode == 'valid':
+    #     log.info(result)
 
     return result
 

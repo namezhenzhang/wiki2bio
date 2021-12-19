@@ -19,8 +19,9 @@ class OutputUnit(nn.Module):
         out = self.linear(x)
 
         if finished is not None:
-            condition = jittor.array(finished,dtype=bool)
-            out[condition] = jittor.zeros_like(out)[condition]
+            out = jittor.ternary(finished, jittor.zeros_like(out), out)
+            # condition = jittor.array(finished,dtype=bool)
+            # out[condition] = jittor.zeros_like(out)[condition]
 
         return out
 
