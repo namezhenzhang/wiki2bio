@@ -19,9 +19,11 @@ class AttentionWrapper(nn.Module):
         
     def execute(self, x, finished=None):
 
-        hs2d = jittor.reshape(self.hs, [-1, self.input_size])
-        phi_hs2d = jittor.tanh(self.linear_h(hs2d))
-        phi_hs = jittor.reshape(phi_hs2d, self.hs.shape)
+        # hs2d = jittor.reshape(self.hs, [-1, self.input_size])
+        # phi_hs2d = jittor.tanh(self.linear_h(hs2d))
+        # phi_hs = jittor.reshape(phi_hs2d, self.hs.shape)
+
+        phi_hs = jittor.tanh(self.linear_h(self.hs))
 
         gamma_h = jittor.tanh(self.linear_s(x))
 

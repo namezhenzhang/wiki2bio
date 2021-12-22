@@ -1,8 +1,8 @@
 import jittor
 import jittor.nn as nn
 from jittor import init
-
-
+import logger
+log = logger.get_logger(__name__)
 class dualAttentionWrapper(nn.Module):
     def __init__(self, hidden_size, input_size, field_size, scope_name):
         

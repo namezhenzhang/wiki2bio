@@ -17,3 +17,6 @@ processed_data.tar
 results.tar
 wiki2bio_tf/ROUGE.tar
 output.txt
+nohup.out
+*.out
+*.txt

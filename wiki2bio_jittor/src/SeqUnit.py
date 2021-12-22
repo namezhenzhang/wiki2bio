@@ -223,7 +223,7 @@ class SeqUnit(nn.Module):
         t, x_t, s_t, finished = time, x0, h0, f0
         while jittor.logical_not(jittor.all(finished)):
             o_t, s_t = self.dec_lstm(x_t, s_t, finished)
-            o_t, _ = self.att_layer(o_t,en_outputs)
+            o_t, _ = self.att_layer(o_t)
             o_t = self.dec_out(o_t, finished)
             emit_ta.append(o_t)
             finished = jittor.greater_equal(t, inputs_len)
@@ -252,7 +252,7 @@ class SeqUnit(nn.Module):
         tag = jittor.logical_not(jittor.all(finished)).item()
         while tag:
             o_t, s_t = self.dec_lstm(x_t, s_t, finished)
-            o_t, w_t = self.att_layer(o_t, en_outputs)
+            o_t, w_t = self.att_layer(o_t)
             o_t = self.dec_out(o_t, finished)
             emit_ta.append(o_t)
             att_ta.append(w_t)
