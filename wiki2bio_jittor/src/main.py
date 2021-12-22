@@ -241,8 +241,13 @@ def main():
     writer = SummaryWriter(args.output_dir + '/tensorboard/')
     if args.load != '0':
         model.load(save_dir)
+    if args.resume != None:
+        log.info(f'resume, path: {args.resume}')
+        model.load(args.resume)
+        
     if args.mode == 'train':
-        train(model,train_dataloader,dev_dataloader,test_dataloader,writer)
+        train(model, train_dataloader, dev_dataloader, test_dataloader, writer)
+        test(model, test_dataloader, writer)
     else:
         test(model,test_dataloader,writer)
 

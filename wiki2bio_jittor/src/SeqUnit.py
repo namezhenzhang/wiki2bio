@@ -270,8 +270,124 @@ class SeqUnit(nn.Module):
         return pred_tokens, atts
     
     def decoder_beam(self, initial_state, beam_size):
-        raise NotImplementedError()
+        def beam_init():
+            time_1 = 1
+            beam_seqs_0 = jittor.Tensor([[self.start_token]] * beam_size)
+            beam_probs_0 = jittor.Tensor([0.] * beam_size)
+            cand_seqs_0 = jittor.Tensor([[self.start_token]])
+            cand_probs_0 = -3e38
+            
+            inputs = [self.start_token]
+            x_t = nn.Embedding(self.embedding, inputs)
+            print(x_t.get_shape().as_list())
+            o_t, s_nt = self.dec_lstm(x_t, initial_state)
+            o_t, w_t = self.att_layer(o_t)
+            o_t = self.dec_out(o_t)
+            print(s_nt[0].get_shape().as_list())
+            # initial_state = tf.reshape(initial_state, [1,-1])
+            logprobs2d = jittor.nn.log_softmax(o_t)
+            total_probs = logprobs2d + jittor.reshape(beam_probs_0, [-1, 1])
+            total_probs_noEOS = jittor.concat([tf.slice(total_probs, [0, 0], [1, self.stop_token]),
+                               jittor.repeat([[-3e38]], [1, 1]),
+                               jittor.slice(total_probs, [0, self.stop_token + 1],
+                                        [1, self.target_vocab - self.stop_token - 1])], 1)
+            flat_total_probs = jittor.reshape(total_probs_noEOS, [-1])
+            print (flat_total_probs.get_shape().as_list())
 
+            beam_k = jittor.minimum(flat_total_probs.size(), beam_size)
+            next_beam_probs, top_indices = jittor.nn.top_k(flat_total_probs, k=beam_k)
+
+            next_bases = jittor.floor_divide(top_indices, self.target_vocab) # tf.floordiv <-> jittor.floor_divide
+            next_mods = jittor.mod(top_indices, self.target_vocab)
+
+            next_beam_seqs = jittor.concat([beam_seqs_0.gather(next_bases), # tf.gather(beam_seqs_0, next_bases) <-> beam_seqs_0.gather(next_bases)
+                                        jittor.reshape(next_mods, [-1, 1])], 1)
+
+            cand_seqs_pad = jittor.nn.pad(cand_seqs_0, [[0, 0], [0, 1]])
+            beam_seqs_EOS = jittor.nn.pad(beam_seqs_0, [[0, 0], [0, 1]])
+            new_cand_seqs = jittor.concat([cand_seqs_pad, beam_seqs_EOS], 0)
+            print (new_cand_seqs.get_shape().as_list())
+
+            EOS_probs = jittor.slice_var_index(total_probs, [0, self.stop_token], [beam_size, 1]) # 这个地方不知道应该怎么写 原来是tf.slice
+            new_cand_probs = jittor.concat([cand_probs_0, jittor.reshape(EOS_probs, [-1])], dim=0)
+            cand_k = new_cand_probs.size(), self.beam_size
+            next_cand_probs, next_cand_indices = jittor.nn.top_k(new_cand_probs, k=cand_k)
+            next_cand_seqs = jittor.gather(new_cand_seqs, next_cand_indices)
+
+            part_state_0 = jittor.reshape(jittor.stack([s_nt[0]]*beam_size, dim=0), [beam_size, self.hidden_size]) # dim=0 is something I add
+            part_state_1 = jittor.reshape(jittor.stack([s_nt[1]]*beam_size, dim=0), [beam_size, self.hidden_size])
+            # part_state_0._shape = jittor.TensorShape((None, None))
+            # part_state_1._shape = jittor.TensorShape((None, None))
+            next_states = (part_state_0, part_state_1)
+            print (next_states[0].get_shape().as_list())
+            return next_beam_seqs, next_beam_probs, next_cand_seqs, next_cand_probs, next_states, time_1
+
+        beam_seqs_1, beam_probs_1, cand_seqs_1, cand_probs_1, states_1, time_1 = beam_init()
+        # beam_seqs_1._shape = tf.TensorShape((None, None))
+        # beam_probs_1._shape = tf.TensorShape((None,))
+        # cand_seqs_1._shape = tf.TensorShape((None, None))
+        # cand_probs_1._shape = tf.TensorShape((None,))
+        # states_1._shape = tf.TensorShape((2, None, self.hidden_size))
+        
+        # def beam_cond(beam_probs, beam_seqs, cand_probs, cand_seqs, state, time):
+        # modified from beam_cond 
+        with jittor.no_grad():
+            while jittor.reduce_maximum(beam_probs_1) >= jittor.reduce_minimum(cand_probs_1) and times_1 <= 60:
+                '''
+                beam_seqs : [beam_size, time]
+                beam_probs: [beam_size, ]
+                cand_seqs : [beam_size, time]
+                cand_probs: [beam_size, ]
+                states : [beam_size * hidden_size, beam_size * hidden_size]
+                '''
+                inputs = jittor.reshape(jittor.slice_var_index(beam_seqs, [0, time], [beam_size, 1]), [beam_size]) # Slice var index probably is wrong
+                # print inputs.get_shape().as_list()
+                x_t = jittor.nn.embedding_lookup(self.embedding, inputs)
+                # print(x_t.get_shape().as_list())
+                o_t, s_nt = self.dec_lstm(x_t, states)
+                o_t, w_t = self.att_layer(o_t)
+                o_t = self.dec_out(o_t)
+                logprobs2d = jittor.nn.log_softmax(o_t)
+                print (logprobs2d.get_shape().as_list())
+                total_probs = logprobs2d + jittor.reshape(beam_probs, [-1, 1])
+                print (total_probs.get_shape().as_list())
+                total_probs_noEOS = jittor.concat([jittor.slice(total_probs, [0, 0], [beam_size, self.stop_token]),
+                                               jittor.repeat([[-3e38]], [beam_size, 1]),
+                                               jittor.slice(total_probs, [0, self.stop_token + 1],
+                                                        [beam_size, self.target_vocab - self.stop_token - 1])], 1)
+                print (total_probs_noEOS.get_shape().as_list())
+                flat_total_probs = jittor.reshape(total_probs_noEOS, [-1])
+                print (flat_total_probs.get_shape().as_list())
+
+                beam_k = jittor.minimum(flat_total_probs.size(), beam_size)
+                next_beam_probs, top_indices = jittor.nn.top_k(flat_total_probs, k=beam_k)
+                print (next_beam_probs.get_shape().as_list())
+
+                next_bases = jittor.floor_divide(top_indices, self.target_vocab)
+                next_mods = jittor.mod(top_indices, self.target_vocab)
+                print (next_mods.get_shape().as_list())
+
+                next_beam_seqs = jittor.concat([beam_seqs.gather(next_bases, dim=0), # tf.gather(beam_seqs, next_bases)
+                                            jittor.reshape(next_mods, [-1, 1])], dim=1)
+                next_states = (s_nt[0].gather(next_bases), s_nt[1].gather(next_bases)) # 这个地方需要关注一下在第几个维度 gather
+                print (next_beam_seqs.get_shape().as_list())
+
+                cand_seqs_pad = jittor.nn.pad(cand_seqs, [[0, 0], [0, 1]])
+                beam_seqs_EOS = jittor.nn.pad(beam_seqs, [[0, 0], [0, 1]])
+                new_cand_seqs = jittor.concat([cand_seqs_pad, beam_seqs_EOS], dim=0) 
+                print (new_cand_seqs.get_shape().as_list())
+
+                EOS_probs = jittor.slice_var_index(total_probs, [0, self.stop_token], [beam_size, 1]) # 这个似乎不太对
+                new_cand_probs = jittor.concat([cand_probs, jittor.reshape(EOS_probs, [-1])], 0)
+                cand_k = jittor.minimum(new_cand_probs.size(), self.beam_size)
+                next_cand_probs, next_cand_indices = jittor.nn.top_k(new_cand_probs, k=cand_k)
+                next_cand_seqs = jittor.gather(new_cand_seqs, next_cand_indices)
+                beam_seqs_1, beam_probs_1, cand_seqs_1, cand_probs_1, states_1, time_1 = next_beam_probs, next_cand_seqs, next_cand_probs, next_states, time+1
+            beam_seqs_all, beam_probs_all, cand_seqs_all, cand_probs_all, _, time_all = beam_seqs_1, beam_probs_1, cand_seqs_1, cand_probs_1, states_1, time_1
+
+        return beam_seqs_all, beam_probs_all, cand_seqs_all, cand_probs_all
+
+            
     def generate(self, encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field=None,encoder_pos=None,encoder_rpos=None):
         g_tokens, atts = self.step('testing',encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field,encoder_pos,encoder_rpos)
         return g_tokens, atts
