@@ -38,14 +38,14 @@ def do_before_running():
 global_step = 0
 
 def train(model, train_dataloader,dev_dataloader,test_dataloader,writer):
-    global global_step
+    global global_step, args
     optimizer = nn.Adam(model.parameters(), args.learning_rate, eps=1e-8, betas=(0.9, 0.999))
     total_loss, start_time = 0.0, time.time()
     loss = 0.0
+    model.train()
     for num_eopch in range(args.epoch):
         with tqdm(total=len(train_dataloader)) as Tqdm:
             for  x in train_dataloader:
-                model.train()
                 Tqdm.update(1)
                 Tqdm.set_description(f"epoch {num_eopch}")
 
@@ -70,8 +70,10 @@ def train(model, train_dataloader,dev_dataloader,test_dataloader,writer):
                     if global_step // args.report >= 1: 
                         ksave_dir = save_model(model, save_dir, global_step // args.report)
                         evaluate(model, dev_dataloader, ksave_dir, 'valid')
+                        model.train()
 
 def test(model, dataloader,writer):
+    log.info('beam search')
     evaluate(model, dataloader, save_dir, writer,'test')
 
 def save_model(model, save_dir, cnt):
@@ -88,6 +90,18 @@ def write_word(pred_list, save_dir, name):
     ss = open(save_dir + name, "w+")
     for item in pred_list:
         ss.write(" ".join(item) + '\n')
+@jittor.no_grad()
+def evaluate_beam(model, dataloader, ksave_dir, writer,mode='valid'):
+    model.eval()
+    with tqdm(total=len(dataloader)) as Tqdm:
+        for x in dataloader:
+            Tqdm.update(1)
+            a = model.generate_beam(**x)
+            print('='*20)
+            print(a[0])
+            print(a[1])
+            print(a[2])
+            print(a[3])
 @jittor.no_grad()
 def evaluate(model, dataloader, ksave_dir, writer,mode='valid'):
     if mode == 'valid':
@@ -111,9 +125,9 @@ def evaluate(model, dataloader, ksave_dir, writer,mode='valid'):
     pred_unk, pred_mask = [], []
     
     k = 0
+    model.eval()
     with tqdm(total=len(dataloader)) as Tqdm:
         for x in dataloader:
-            model.eval()
             Tqdm.update(1)
             predictions, atts = model.generate(**x)
 
