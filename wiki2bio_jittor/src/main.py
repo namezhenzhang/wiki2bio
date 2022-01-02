@@ -39,7 +39,6 @@ def trans(text):
     text is a map of strings that contains the information of the table
     """
     # fake version
-    text = {"name" : "shuning zhang", "birth" : "2001-09-09" , "hobby" : "playing basketball", "nation" : "America"}
     # Define new vocab table
     v = Vocab()
     write_test_lab, write_test_lab_id, write_test_pos, write_test_rpos, write_test_val, write_test_val_id, write_test_summary_id = [], [], [], [], [], [], []

@@ -12,7 +12,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-# from main import trans
+from main import trans
 
 str_main = "欢迎来到 Table-to-text Generation by Structure-aware \n" \
            "Seq2seq Learning 复现交互 demo，你可以在这里看到对于论文的 \n" \
@@ -224,8 +224,8 @@ class Ui_MainWindow(object):
         self.pushButton.clicked.connect(self.translate)
         self.pushButton.setText(_translate("Dialog", "转换"))
         self.textEdit.setPlainText("输入人名...")
-        self.textEdit_3.setPlainText("输入生日...")
-        self.textEdit_4.setPlainText("输入爱好...")
+        self.textEdit_3.setPlainText("输入出生用名...")
+        self.textEdit_4.setPlainText("输入职位...")
         self.textEdit_5.setPlainText("输入国籍...")
         self.textEdit_6.setPlainText("输入出生地点...")
         self.textEdit_7.setPlainText("输入死亡地点...")
@@ -263,8 +263,17 @@ class Ui_MainWindow(object):
     def translate(self):
         name = self.textEdit.toPlainText()
         birth, hobby, nation, birth_place, death_place, occupation = self.textEdit_3.toPlainText(), self.textEdit_4.toPlainText(), self.textEdit_5.toPlainText(), self.textEdit_6.toPlainText(), self.textEdit_7.toPlainText(), self.textEdit_8.toPlainText()
-        # answer = trans(text)
-        answer = "jude barrington stirling ( born 29 june 1982 )\\ is an english footballer who plays as a defender \\for brimsdown f.c. ."
+        text = {
+            "name":name,
+            "birth_name":birth,
+            "nationnality":nation,
+            "position":hobby,
+            "birth_place":birth_place,
+            "death_place":death_place,
+            "occupation":occupation
+        }
+        answer = trans(text)
+        # answer = "jude barrington stirling ( born 29 june 1982 )\\ is an english footballer who plays as a defender \\for brimsdown f.c. ."
         self.textEdit_2.setPlainText(self.textEdit_2.toPlainText() + answer)
 
 
