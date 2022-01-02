@@ -28,7 +28,7 @@ The author conducted the experiment based on WIKI2BIO dataset, giving training a
 
 -tf  **Tensorflow版本，在根目录下运行 python wiki2bio_tf/src/Main.py 即可** run `` sh wiki2io_tf/src/Main.py`` and try the tensorflow version 
 
--jittor **计图复现版本，在根目录下运行 wiki2bio_jittor/src/run.sh 即可** run `` sh wiki2io_jittor/src/run.sh`` and try the jittor version 
+-jittor **计图复现版本，在根目录下运行 wiki2bio_jittor/src/run.sh 即可** run `` sh wiki2io_jittor/src/run.sh`` and try the jittor version . 将main.test中的`evaluate`函数修改为`evaluate_beam`即可实现beamsearch。
 
 -doc  **一些文档信息和图片** document information and pictures
 
