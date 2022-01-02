@@ -199,6 +199,7 @@ def evaluate(model, dataloader, ksave_dir, writer,mode='valid'):
         for x in dataloader:
             model.eval()
             Tqdm.update(1)
+            model.generate_beam(**x)
             predictions, atts = model.generate(**x)
 
             atts = np.squeeze(np.array(atts),axis=-1)

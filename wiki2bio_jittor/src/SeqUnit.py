@@ -129,8 +129,11 @@ class SeqUnit(nn.Module):
             # decoder for testing
             return self.decoder_g(en_state, en_outputs)
         elif type_=='beam':
-            raise NotImplementedError()
-            # beam_seqs, beam_probs, cand_seqs, cand_probs = self.decoder_beam(en_state, beam_size)
+            # raise NotImplementedError()
+            ret = self.decoder_g(en_state, en_outputs)
+            beam_seqs, beam_probs, cand_seqs, cand_probs = self.decoder_beam(en_state, 4) # beam_size = 4
+            ipdb.set_trace()
+            
     def execute(self,encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field=None,encoder_pos=None,encoder_rpos=None):
         
         de_outputs, de_state = self.step('training',encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field,encoder_pos,encoder_rpos)
@@ -269,21 +272,21 @@ class SeqUnit(nn.Module):
         atts = jittor.stack(att_ta)
         return pred_tokens, atts
     
-    def decoder_beam(self, initial_state, beam_size):
+    def decoder_beam(self, initial_state, beam_size=4):
         def beam_init():
             time_1 = 1
-            beam_seqs_0 = jittor.Tensor([[self.start_token]] * beam_size)
-            beam_probs_0 = jittor.Tensor([0.] * beam_size)
-            cand_seqs_0 = jittor.Tensor([[self.start_token]])
+            beam_seqs_0 = jittor.array([[self.start_token]] * beam_size)
+            beam_probs_0 = jittor.array([0.] * beam_size)
+            cand_seqs_0 = jittor.array([[self.start_token]])
             cand_probs_0 = -3e38
             
-            inputs = [self.start_token]
-            x_t = nn.Embedding(self.embedding, inputs)
-            print(x_t.get_shape().as_list())
+            inputs = jittor.array([self.start_token])
+            x_t = self.embedding(inputs)
+            # has no attribute get shape
             o_t, s_nt = self.dec_lstm(x_t, initial_state)
             o_t, w_t = self.att_layer(o_t)
             o_t = self.dec_out(o_t)
-            print(s_nt[0].get_shape().as_list())
+            # print(s_nt[0].get_shape().as_list())
             # initial_state = tf.reshape(initial_state, [1,-1])
             logprobs2d = jittor.nn.log_softmax(o_t)
             total_probs = logprobs2d + jittor.reshape(beam_probs_0, [-1, 1])
@@ -342,7 +345,7 @@ class SeqUnit(nn.Module):
                 '''
                 inputs = jittor.reshape(jittor.slice_var_index(beam_seqs, [0, time], [beam_size, 1]), [beam_size]) # Slice var index probably is wrong
                 # print inputs.get_shape().as_list()
-                x_t = jittor.nn.embedding_lookup(self.embedding, inputs)
+                x_t = self.embedding(inputs)
                 # print(x_t.get_shape().as_list())
                 o_t, s_nt = self.dec_lstm(x_t, states)
                 o_t, w_t = self.att_layer(o_t)

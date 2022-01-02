@@ -5,6 +5,7 @@
 
 import tensorflow as tf
 import pickle
+import ipdb
 from AttentionUnit import AttentionWrapper
 from dualAttentionUnit import dualAttentionWrapper
 from LstmUnit import LstmUnit
@@ -296,6 +297,8 @@ class SeqUnit(object):
             print(s_nt[0].get_shape().as_list())
             # initial_state = tf.reshape(initial_state, [1,-1])
             logprobs2d = tf.nn.log_softmax(o_t)
+            ipdb.set_trace()
+            # print(logprobs2d.shape)
             total_probs = logprobs2d + tf.reshape(beam_probs_0, [-1, 1])
             total_probs_noEOS = tf.concat([tf.slice(total_probs, [0, 0], [1, self.stop_token]),
                                tf.tile([[-3e38]], [1, 1]),

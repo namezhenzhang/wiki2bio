@@ -37,7 +37,7 @@ def get_args_parser():
     parser.add_argument("--report",type=int,default=5000,help='report valid results after some steps')
     parser.add_argument("--learning_rate",type=float,default=0.0003,help='learning rate')
 
-    parser.add_argument("--mode",type=str,default='train',choices=['train','test'],help='train or test')
+    parser.add_argument("--mode",type=str,default='test',choices=['train','test'],help='train or test')
     parser.add_argument('--resume', type=str, default=None,help=" ")
     parser.add_argument("--load",type=str,default='0',help='load directory')
     parser.add_argument("--dir",type=str,default='processed_data',help='data set directory')
