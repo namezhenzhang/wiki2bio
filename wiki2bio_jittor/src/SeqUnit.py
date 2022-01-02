@@ -130,8 +130,8 @@ class SeqUnit(nn.Module):
             return self.decoder_g(en_state, en_outputs)
         elif type_=='beam':
             # raise NotImplementedError()
-            beam_seqs, beam_probs, cand_seqs, cand_probs = self.decoder_beam(en_state, beam_size)
-            return beam_seqs, beam_probs, cand_seqs, cand_probs
+            beam_seqs, beam_probs, cand_seqs, cand_probs, atts = self.decoder_beam(en_state, beam_size)
+            return beam_seqs, beam_probs, cand_seqs, cand_probs, atts
     def execute(self,encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field=None,encoder_pos=None,encoder_rpos=None):
         
         de_outputs, de_state = self.step('training',encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field,encoder_pos,encoder_rpos)
@@ -273,6 +273,7 @@ class SeqUnit(nn.Module):
     def decoder_beam(self, initial_state, beam_size):
         batch_size = initial_state[0].shape[0]
         # print(batch_size)
+        att_ta = []
         def beam_init():
             # return beam_seqs_1 beam_probs_1 cand_seqs_1 cand_prob_1 next_states time
 
@@ -294,6 +295,7 @@ class SeqUnit(nn.Module):
             o_t, s_nt = self.dec_lstm(x_t, initial_state)
             o_t, w_t = self.att_layer(o_t)
             o_t = self.dec_out(o_t)
+            att_ta.append(w_t)
             # print(s_nt[0].get_shape().as_list())
             # initial_state = tf.reshape(initial_state, [1,-1])
             # print(o_t.shape)
@@ -361,6 +363,7 @@ class SeqUnit(nn.Module):
             o_t, s_nt = self.dec_lstm(x_t, states)
             o_t, w_t = self.att_layer(o_t)
             o_t = self.dec_out(o_t)
+            att_ta.append(w_t)
             logprobs2d = jittor.nn.log_softmax(o_t)
             # print (logprobs2d.get_shape().as_list())
             total_probs = logprobs2d + jittor.reshape(beam_probs, [-1, 1])
@@ -409,7 +412,8 @@ class SeqUnit(nn.Module):
             beam_seqs_1, beam_probs_1, cand_seqs_1, cand_probs_1, states_1, time_1 = beam_step(beam_seqs_1, beam_probs_1, cand_seqs_1, cand_probs_1, states_1, time_1)
         # ret_vars = tf.while_loop(cond=beam_cond, body=beam_step, loop_vars=loop_vars, back_prop=False)
         # beam_seqs_all, beam_probs_all, cand_seqs_all, cand_probs_all, _, time_all = ret_vars
-        return beam_seqs_1, beam_probs_1, cand_seqs_1, cand_probs_1
+        atts = jittor.stack(att_ta)
+        return beam_seqs_1, beam_probs_1, cand_seqs_1, cand_probs_1,atts
         # return beam_seqs_all, beam_probs_all, cand_seqs_all, cand_probs_all
 
     def generate(self, encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field=None,encoder_pos=None,encoder_rpos=None):
@@ -417,5 +421,5 @@ class SeqUnit(nn.Module):
         return g_tokens, atts
 
     def generate_beam(self, encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field=None,encoder_pos=None,encoder_rpos=None):
-        beam_seqs_all, beam_probs_all, cand_seqs_all, cand_probs_all = self.step('beam',encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field,encoder_pos,encoder_rpos)
-        return beam_seqs_all, beam_probs_all, cand_seqs_all, cand_probs_all
+        beam_seqs_all, beam_probs_all, cand_seqs_all, cand_probs_all, atts = self.step('beam',encoder_input,decoder_input,encoder_len,decoder_len,decoder_output,encoder_field,encoder_pos,encoder_rpos)
+        return beam_seqs_all, beam_probs_all, cand_seqs_all, cand_probs_all, atts

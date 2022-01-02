@@ -22,7 +22,7 @@ python wiki2bio_jittor/src/main.py \
 --mode test \
 --batch_size 64 \
 --seed 100 \
---batch_size_valid 1 \
+--batch_size_valid 128 \
 --accumulation 1 \
 --learning_rate 0.0003 \
 --use_cuda True \

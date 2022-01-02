@@ -73,7 +73,6 @@ def train(model, train_dataloader,dev_dataloader,test_dataloader,writer):
                         model.train()
 
 def test(model, dataloader,writer):
-    log.info('beam search')
     evaluate(model, dataloader, save_dir, writer,'test')
 
 def save_model(model, save_dir, cnt):
@@ -90,18 +89,99 @@ def write_word(pred_list, save_dir, name):
     ss = open(save_dir + name, "w+")
     for item in pred_list:
         ss.write(" ".join(item) + '\n')
+
 @jittor.no_grad()
-def evaluate_beam(model, dataloader, ksave_dir, writer,mode='valid'):
+def evaluate_beam(model, dataloader, ksave_dir, writer,mode='test'):
+    
+
+    if mode == 'valid':
+        # texts_path = "original_data/valid.summary"
+        texts_path = os.path.join(args.root_dir,"processed_data/valid/valid.box.val")
+        gold_path = os.path.join(args.root_dir,'processed_data/valid/valid_split_for_rouge/gold_summary_')
+        # evalset = dataloader.dev_set
+    else:
+        # texts_path = "original_data/test.summary"
+        texts_path = os.path.join(args.root_dir,"processed_data/test/test.box.val")
+        gold_path = os.path.join(args.root_dir,'processed_data/test/test_split_for_rouge/gold_summary_')
+        # evalset = dataloader.test_set
+    
+    # for copy words from the infoboxes
+    texts = open(texts_path, 'r').read().strip().split('\n')
+    texts = [list(t.strip().split()) for t in texts]
+    v = Vocab()
+
+    # with copy
+    pred_list, pred_list_copy, gold_list = [], [], []
+    pred_unk, pred_mask = [], []
+    pred_mask = []
+    
+    k = 0
     model.eval()
     with tqdm(total=len(dataloader)) as Tqdm:
         for x in dataloader:
             Tqdm.update(1)
-            a = model.generate_beam(**x)
-            print('='*20)
-            print(a[0])
-            print(a[1])
-            print(a[2])
-            print(a[3])
+            predictions, _, _, _, atts = model.generate_beam(**x)
+
+            atts = np.squeeze(np.array(atts),axis=-1)
+            idx = 0
+            for summary in [predictions[0]]:
+                with open(pred_path + str(k), 'w') as sw:
+                    summary = list(summary)
+                    if summary[0]==2:
+                        summary = summary[1:]
+                    if 6 in summary:
+                        summary = summary[:summary.index(6)] if summary[0] != 6 else [6]
+                    real_sum, mask_sum = [], []
+                    # real_sum, unk_sum, mask_sum = [], [], []
+                    for tk, tid in enumerate(summary):
+                        if tid == 3:
+                            sub = texts[k][np.argmax(atts[tk,: len(texts[k]),idx])]
+                            real_sum.append(sub)
+                            mask_sum.append("**" + str(sub) + "**")
+                        else:
+                            real_sum.append(v.id2word(tid))
+                            mask_sum.append(v.id2word(tid))
+
+                    sw.write(" ".join([str(x) for x in real_sum]) + '\n')
+                    pred_list.append([str(x) for x in real_sum])
+                    pred_mask.append([str(x) for x in mask_sum])
+                    k += 1
+                    idx += 1
+
+    write_word(pred_mask, ksave_dir, mode + "_summary_copy.txt")
+    # write_word(pred_unk, ksave_dir, mode + "_summary_unk.txt")
+
+
+    for tk in range(k):
+        with open(gold_path + str(tk), 'r') as g:
+            gold_list.append([g.read().strip().split()])
+
+    gold_set = [[gold_path + str(i)] for i in range(k)]
+    pred_set = [pred_path + str(i) for i in range(k)]
+
+    recall, precision, F_measure = PythonROUGE(pred_set, gold_set, ngram_order=4)
+    bleu = corpus_bleu(gold_list, pred_list)
+    copy_result = "with copy F_measure: %s Recall: %s Precision: %s BLEU: %s ." % \
+    (str(F_measure), str(recall), str(precision), str(bleu))
+    log.info(copy_result)
+    try:
+        writer.add_scalar('F_measure copy', F_measure, global_step=global_step)
+        writer.add_scalar('Recall copy', recall, global_step=global_step)
+        writer.add_scalar('Precision copy', precision, global_step=global_step)
+    except:
+        pass
+    try:
+        writer.add_scalar('BLEU copy', bleu, global_step=global_step)
+    except:
+        pass
+
+    result = copy_result 
+
+
+    return result
+
+
+
 @jittor.no_grad()
 def evaluate(model, dataloader, ksave_dir, writer,mode='valid'):
     if mode == 'valid':
