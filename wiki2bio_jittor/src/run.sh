@@ -1,10 +1,10 @@
 # export JT_SYNC=1
 # export trace_py_var=3
 
-CUDA_VISIBLE_DEVICES=2,3,4
+# CUDA_VISIBLE_DEVICES=-1
 
 nohup python wiki2bio_jittor/src/main.py \
---mode train \
+--mode test \
 --batch_size 64 \
 --seed 100 \
 --batch_size_valid 256 \
@@ -14,6 +14,6 @@ nohup python wiki2bio_jittor/src/main.py \
 --epoch 10 \
 --dual_attention True \
 --resume /home/zhangzhen/dir1/wiki2bio/wiki2bio_jittor/outputlogs/00026/res/checkpoints/9/model.ckpt \
->dual_3.out 2>&1 &
+> dual_3.out 2>&1 &
 
 # https://cg.cs.tsinghua.edu.cn/jittor/assets/cuda11.2_cudnn8_linux.tgz

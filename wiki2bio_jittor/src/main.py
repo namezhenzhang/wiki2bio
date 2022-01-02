@@ -34,6 +34,90 @@ def do_before_running():
     set_seed(args.seed)
     return args
 
+def trans(text):
+    """
+    text is a map of strings that contains the information of the table
+    """
+    # fake version
+    text = {"name" : "shuning zhang", "birth" : "2001-09-09" , "hobby" : "playing basketball", "nation" : "America"}
+    # Define new vocab table
+    v = Vocab()
+    write_test_lab, write_test_lab_id, write_test_pos, write_test_rpos, write_test_val, write_test_val_id, write_test_summary_id = [], [], [], [], [], [], []
+    for key, value in text.items():
+        write_test_lab_id += [v.word2id(_key) for _key in key]
+        write_test_lab += [_key for _key in key]
+        write_test_val_id += [v.word2id(_value) for _value in value]
+        write_test_val += [_value for _value in value]
+        write_test_pos += [_pos for _pos in range(0, len(key + value))]
+        write_test_rpos += [min(_pos, 30) for _pos in range(0, len(key + value), -1)]
+        write_test_summary_id = write_test_summary_id + [v.word2id(_key) for _key in key] + [v.word2id(_value) for _value in value]
+    # for sanity check
+    ipdb.set_trace()
+    with open("../processed_data/test/test.box.lab", "w", encoding="utf-8") as lab_file:
+        lab_file.write(" ".join(write_test_lab) + "\n")
+    with open("../processed_data/test/test.box.lab.id", "w", encoding="utf-8") as lab_id_file:
+        lab_id_file.write(" ".join(write_test_lab_id) + "\n")
+    with open("../processed_data/test/test.box.pos", "w", encoding="utf-8") as lab_pos_file:
+        lab_pos_file.write(" ".join(write_test_pos) + "\n")
+    with open("../processed_data/test/test.box.rpos", "w", encoding="utf-8") as lab_rpos_file:
+        lab_rpos_file.write(" ".join(write_test_rpos) + "\n")
+    with open("../processed_data/test/test.box.val", "w", encoding="utf-8") as lab_val_file:
+        lab_val_file.write(" ".join(write_test_val) + "\n")
+    with open("../processed_data/test/test.box.val.id", "w", encoding="utf-8") as lab_val_id_file:
+        lab_val_id_file.write(" ".join(write_test_val_id) + "\n")
+    with open("../processed_data/test/test.summary.id", "w", encoding="utf-8") as lab_summary_id_file:
+        lab_summary_id_file.write(" ".join(write_test_summary_id) + "\n")
+    test_dataloader = DataLoader(os.path.join("../","processed_data"), 0, 'test').set_attrs(batch_size=1, shuffle=False)
+    model = SeqUnit(batch_size=args.batch_size, hidden_size=args.hidden_size, emb_size=args.emb_size,
+                        field_size=args.field_size, pos_size=args.pos_size, field_vocab=args.field_vocab,
+                        source_vocab=args.source_vocab, position_vocab=args.position_vocab,
+                        target_vocab=args.target_vocab, scope_name="seq2seq", name="seq2seq",
+                        field_concat=args.field, position_concat=args.position,
+                        fgate_enc=args.fgate_encoder, dual_att=args.dual_attention, decoder_add_pos=args.decoder_pos,
+                        encoder_add_pos=args.encoder_pos, learning_rate=args.learning_rate)
+    model.load("C:\\Users\\zhang\\Desktop\\wiki2bio\\wiki2bio_jittor\\outputlogs\\00000\\model.ckpt")
+    texts_path = os.path.join(args.root_dir,"processed_data/test/test.box.val")
+    gold_path = os.path.join(args.root_dir,'processed_data/test/test_split_for_rouge/gold_summary_')
+    # for copy words from the infoboxes
+    texts = open(texts_path, 'r').read().strip().split('\n')
+    texts = [list(t.strip().split()) for t in texts]
+    # with copy
+    pred_list, pred_list_copy, gold_list = [], [], []
+    pred_unk, pred_mask = [], []
+    
+    k = 0
+    real_sum, unk_sum, mask_sum = [], [], []
+    with tqdm(total=len(dataloader)) as Tqdm:
+        for x in dataloader:
+            real_sum, unk_sum, mask_sum = [], [], []
+            model.eval()
+            Tqdm.update(1)
+            predictions, atts = model.generate(**x)
+
+            atts = np.squeeze(np.array(atts),axis=-1)
+            idx = 0
+            for summary in np.array(predictions):
+                with open(pred_path + str(k), 'w') as sw:
+                    summary = list(summary)
+                    if 2 in summary:
+                        summary = summary[:summary.index(2)] if summary[0] != 2 else [2]
+                    for tk, tid in enumerate(summary):
+                        if tid == 3:
+                            sub = texts[k][np.argmax(atts[tk,: len(texts[k]),idx])]
+                            real_sum.append(sub)
+                            mask_sum.append("**" + str(sub) + "**")
+                        else:
+                            real_sum.append(v.id2word(tid))
+                            mask_sum.append(v.id2word(tid))
+                        unk_sum.append(v.id2word(tid))
+                    sw.write(" ".join([str(x) for x in real_sum]) + '\n')
+                    pred_list.append([str(x) for x in real_sum])
+                    pred_unk.append([str(x) for x in unk_sum])
+                    pred_mask.append([str(x) for x in mask_sum])
+                    k += 1
+                    idx += 1
+
+    return " ".join([str(x) for x in real_sum])
 
 global_step = 0
 
