@@ -3,13 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="4468a2ed-6f96-4f05-8c09-902f715ef7b0" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wiki2bio_jittor/src/SeqUnit.py" beforeDir="false" afterPath="$PROJECT_DIR$/wiki2bio_jittor/src/SeqUnit.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wiki2bio_jittor/src/configs.py" beforeDir="false" afterPath="$PROJECT_DIR$/wiki2bio_jittor/src/configs.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wiki2bio_jittor/src/gui_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/wiki2bio_jittor/src/gui_main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wiki2bio_jittor/src/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/wiki2bio_jittor/src/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wiki2bio_jittor/src/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/wiki2bio_jittor/src/preprocess.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wiki2bio_jittor/src/wiki2bio.ui" beforeDir="false" afterPath="$PROJECT_DIR$/wiki2bio_jittor/src/wiki2bio.ui" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/wiki2bio_tf/SeqUnit.py" beforeDir="false" afterPath="$PROJECT_DIR$/wiki2bio_tf/SeqUnit.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wiki2bio_jittor/src/wiki2bio_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/wiki2bio_jittor/src/wiki2bio_main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
