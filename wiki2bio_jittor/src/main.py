@@ -2,6 +2,7 @@
 import logger
 from configs import get_args_parser,  get_args, save_args
 import random
+import ipdb
 import numpy  as np
 import jittor
 import time, os, sys, shutil
@@ -43,29 +44,29 @@ def trans(text):
     v = Vocab()
     write_test_lab, write_test_lab_id, write_test_pos, write_test_rpos, write_test_val, write_test_val_id, write_test_summary_id = [], [], [], [], [], [], []
     for key, value in text.items():
-        write_test_lab_id += [v.word2id(_key) for _key in key]
-        write_test_lab += [_key for _key in key]
-        write_test_val_id += [v.word2id(_value) for _value in value]
-        write_test_val += [_value for _value in value]
-        write_test_pos += [_pos for _pos in range(0, len(key + value))]
-        write_test_rpos += [min(_pos, 30) for _pos in range(0, len(key + value), -1)]
-        write_test_summary_id = write_test_summary_id + [v.word2id(_key) for _key in key] + [v.word2id(_value) for _value in value]
+        write_test_lab_id += [v.word2id(_key) for _key in key.split(" ")]
+        write_test_lab += [_key for _key in key.split(" ")]
+        write_test_val_id += [v.word2id(_value) for _value in value.split(" ")]
+        write_test_val += [_value for _value in value.split(' ')]
+        write_test_pos += [_pos for _pos in range(0, len(key.split(" ") + value.split(" ")))]
+        write_test_rpos += [min(_pos, 30) for _pos in range(0, len(key.split(" ") + value.split(" ")), -1)]
+        write_test_summary_id = write_test_summary_id + [v.word2id(_key) for _key in key.split(' ')] + [v.word2id(_value) for _value in value.split(" ")]
     # for sanity check
     ipdb.set_trace()
-    with open("../processed_data/test/test.box.lab", "w", encoding="utf-8") as lab_file:
+    with open("../processed_data/test/test.box.lab", "w", encoding="gbk") as lab_file:
         lab_file.write(" ".join(write_test_lab) + "\n")
-    with open("../processed_data/test/test.box.lab.id", "w", encoding="utf-8") as lab_id_file:
-        lab_id_file.write(" ".join(write_test_lab_id) + "\n")
-    with open("../processed_data/test/test.box.pos", "w", encoding="utf-8") as lab_pos_file:
-        lab_pos_file.write(" ".join(write_test_pos) + "\n")
-    with open("../processed_data/test/test.box.rpos", "w", encoding="utf-8") as lab_rpos_file:
-        lab_rpos_file.write(" ".join(write_test_rpos) + "\n")
-    with open("../processed_data/test/test.box.val", "w", encoding="utf-8") as lab_val_file:
+    with open("../processed_data/test/test.box.lab.id", "w", encoding="gbk") as lab_id_file:
+        lab_id_file.write(" ".join([str(a) for a in write_test_lab_id]) + "\n")
+    with open("../processed_data/test/test.box.pos", "w", encoding="gbk") as lab_pos_file:
+        lab_pos_file.write(" ".join([str(a) for a in write_test_pos]) + "\n")
+    with open("../processed_data/test/test.box.rpos", "w", encoding="gbk") as lab_rpos_file:
+        lab_rpos_file.write(" ".join([str(a) for a in write_test_rpos]) + "\n")
+    with open("../processed_data/test/test.box.val", "w", encoding="gbk") as lab_val_file:
         lab_val_file.write(" ".join(write_test_val) + "\n")
-    with open("../processed_data/test/test.box.val.id", "w", encoding="utf-8") as lab_val_id_file:
-        lab_val_id_file.write(" ".join(write_test_val_id) + "\n")
-    with open("../processed_data/test/test.summary.id", "w", encoding="utf-8") as lab_summary_id_file:
-        lab_summary_id_file.write(" ".join(write_test_summary_id) + "\n")
+    with open("../processed_data/test/test.box.val.id", "w", encoding="gbk") as lab_val_id_file:
+        lab_val_id_file.write(" ".join([str(a) for a in write_test_val_id]) + "\n")
+    with open("../processed_data/test/test.summary.id", "w", encoding="gbk") as lab_summary_id_file:
+        lab_summary_id_file.write(" ".join([str(a) for a in write_test_summary_id]) + "\n")
     test_dataloader = DataLoader(os.path.join("../","processed_data"), 0, 'test').set_attrs(batch_size=1, shuffle=False)
     model = SeqUnit(batch_size=args.batch_size, hidden_size=args.hidden_size, emb_size=args.emb_size,
                         field_size=args.field_size, pos_size=args.pos_size, field_vocab=args.field_vocab,
